@@ -148,7 +148,6 @@ print(df_HR_MASTER)
 df_HR_MASTER.plot()
 plt.show()
 
-
 #Clean up the axis of the "Master Plot"
 
 #Try to plot a bunch of different workouts on the same plot and see how they differ
