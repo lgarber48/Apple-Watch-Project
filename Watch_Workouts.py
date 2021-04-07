@@ -2,6 +2,10 @@ import pandas as pd
 from matplotlib import pyplot as plt
 import xmltodict
 import datetime
+import numpy as np
+
+#Step 1: Automatically extracted and pre-processed the desired HR data from XML file into a organized and labeled dataframe
+#Step 2: Apply Moving Average algorithm to smooth HR data
 
 input_path='/Users/louisgarber/Documents/McMaster Biomedical Eng/Apple Watch Project/apple_health_export/export.xml'
 
@@ -76,16 +80,15 @@ def extract_HR(Wk_Data):
     #Convert values to numeric
     df_records_HR_Wk['@value']=df_records_HR_Wk['@value'].apply(pd.to_numeric)
 
-    #print(df_records_HR_Wk.head(10))
-    #print(df_records_HR_Wk.iloc[3])
-
     #Average Heart Rate During Workout
     Avg_HR=round(df_records_HR_Wk['@value'].mean(),2)
     print('Avg. Heart Rate: '+str(Avg_HR)+' BPM')
 
+    #Apply Moving Average -> Figure out Rolling Window
+    df_records_HR_Wk['@value']=df_records_HR_Wk['@value'].rolling(7).mean()
+
     #Raname column to match activity 
     df_records_HR_Wk.rename(columns={'@value':Wk_Data[3]},inplace=True)
-    #print(df_records_HR_Wk.iloc[1])
 
     return df_records_HR_Wk[Wk_Data[3]]
 
@@ -98,45 +101,60 @@ Wk_Type=[]
 for i in range(len(df_workouts)):
     Wk_Data.append(extract_workout(i))
 
-#Save Workout types into a list to reference when training the model (saved into Wk_Type)
+#Save Workout duration and types into lists to reference when training the model (saved into Wk_Type)
 for j in range(len(df_workouts)):
     Wk_List=Wk_Data[j]
     Wk_Duration.append(Wk_List[2])
     Wk_Type.append(Wk_List[3])
 
-print(Wk_Duration)
-print(Wk_Type)
+Wk_Duration=np.array(Wk_Duration)
 
-#Extract HR data for all the workouts and save into 'HR MASTER' df
+#Extract HR data for all the selected workouts and save into 'HR MASTER' df
 df_HR_MASTER=[]
+ 
+#SELECT DESIRED WORKOUT TO EXTRACT AND PLOT (Select 'All' for all workouts)
+Workout='All'
 
-for k in range(len(df_workouts)):
-    data=extract_HR(Wk_Data[k])
-    df_HR_MASTER.append(data)
+#Extract desired location of selected workout
+Location=[i for i,x in enumerate(Wk_Type) if x == Workout]
+
+if Workout == 'All':
+    for k in range(len(df_workouts)): 
+        data=extract_HR(Wk_Data[k])
+        df_HR_MASTER.append(data)
+    Activity_Duration = Wk_Duration
+else:
+    for k in Location: 
+        data=extract_HR(Wk_Data[k])
+        df_HR_MASTER.append(data)
+    Activity_Duration = list(Wk_Duration[Location])
+    
 
 df_HR_MASTER=pd.concat(df_HR_MASTER, axis=1)
+
+#Print Master Data Frame
 print(df_HR_MASTER)
+print(Activity_Duration)
 
 #PLOTTING
 #Create x range for plot
 #Length of max workout duration (in s) spaced out at intervals of 120 (s)
-xlength=len(range(0,max(Wk_Duration),120))
-#Length of df with all HRs from workouts
+xlength=len(range(0,max(Activity_Duration),120))
+#Length of df with all the HRs from selected workouts
 df_len=len(df_HR_MASTER)
 
 #Equation to ensure the correct # of xticks are created to space intervals of 120s
 Diff=(round(df_len/xlength)*xlength)-df_len
 
 x=range(0,df_len+Diff,round(df_len/xlength))
-xlabel=range(0,max(Wk_Duration),120)
+xlabel=range(0,max(Activity_Duration),120)
 
 ax=df_HR_MASTER.plot()
 ax.set_xticks(x)
 ax.set_xticklabels([x for x in xlabel])
 plt.xlabel('Time (s)')
 plt.ylabel('Beats Per Minute (BPM)')
-plt.title('Heart Rate Data for Workouts')
+plt.title('Heart Rate Data for Selected Workouts')
 plt.show()
 
-#Try to plot a bunch of different workouts on the same plot and see how they differ
-# Look into algorithm to reduce noise (or smooth) signal  
+#Look into algorithm to reduce noise (or smooth) signal  
