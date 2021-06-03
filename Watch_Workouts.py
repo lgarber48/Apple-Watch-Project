@@ -3,11 +3,14 @@ from matplotlib import pyplot as plt
 import xmltodict
 import datetime
 import numpy as np
+import time
 
 #Step 1: Automatically extracted and pre-processed the desired HR data from XML file into a organized and labeled dataframe
 #Step 2: Apply Moving Average algorithm to smooth HR data
+start=time.time()
 
 input_path='/Users/louisgarber/Documents/McMaster Biomedical Eng/Apple Watch Project/apple_health_export/export.xml'
+#input_path='/Users/louisgarber/Desktop/apple_health_export 4/export.xml'
 
 with open(input_path,'r') as xml_file:
     input_data=xmltodict.parse(xml_file.read())
@@ -23,7 +26,6 @@ df_workouts=pd.DataFrame(workout_list)
 print('Length of df_workouts: '+str(len(df_workouts)))
 
 #Extract Workout Information
-#Note: Only 6 total workouts have been uploaded (0-5)
 def extract_workout(i):
     #Change some workout data from string to numeric (either float64 or int64)
     df_workouts[['@duration','@totalDistance','@totalEnergyBurned']]=df_workouts[['@duration','@totalDistance','@totalEnergyBurned']].apply(pd.to_numeric)
@@ -73,12 +75,14 @@ def extract_HR(Wk_Data):
     df_records_HR['@startDate']=pd.to_datetime(df_records_HR['@startDate'],format=format)
     df_records_HR['@endDate']=pd.to_datetime(df_records_HR['@endDate'],format=format)
 
-    #Extract HR values during desired workout duration
-    df_records_HR_Wk=df_records_HR[(df_records_HR['@startDate'] >= Wk_Data[0]) & (df_records_HR['@endDate'] <= Wk_Data[1])].copy()
+    #Extract HR values during desired workout duration 
+    mask = (df_records_HR['@startDate'] >= Wk_Data[0]) & (df_records_HR['@endDate'] <= Wk_Data[1])
+    df_records_HR_Wk=df_records_HR[mask].copy()
     df_records_HR_Wk.reset_index(inplace=True)
 
     #Convert values to numeric
     df_records_HR_Wk['@value']=df_records_HR_Wk['@value'].apply(pd.to_numeric)
+    #print(df_records_HR_Wk['@value'].head(50))
 
     #Average Heart Rate During Workout
     Avg_HR=round(df_records_HR_Wk['@value'].mean(),2)
@@ -129,11 +133,10 @@ else:
         df_HR_MASTER.append(data)
     Activity_Duration = list(Wk_Duration[Location])
     
-
 df_HR_MASTER=pd.concat(df_HR_MASTER, axis=1)
 
 #Print Master Data Frame
-print(df_HR_MASTER)
+print(df_HR_MASTER.head(20))
 print(Activity_Duration)
 
 #PLOTTING
@@ -149,6 +152,12 @@ Diff=(round(df_len/xlength)*xlength)-df_len
 x=range(0,df_len+Diff,round(df_len/xlength))
 xlabel=range(0,max(Activity_Duration),120)
 
+#Create Excel sheet to double check data
+#finalADS=df_HR_MASTER.to_csv('/Users/louisgarber/Documents/McMaster Biomedical Eng/Apple Watch Project/apple_health_export/HR_11052021.csv',header=True)
+
+end=time.time()
+print('Runtime: '+str(end-start))
+
 ax=df_HR_MASTER.plot()
 ax.set_xticks(x)
 ax.set_xticklabels([x for x in xlabel])
@@ -157,4 +166,8 @@ plt.ylabel('Beats Per Minute (BPM)')
 plt.title('Heart Rate Data for Selected Workouts')
 plt.show()
 
-#Look into algorithm to reduce noise (or smooth) signal  
+
+#NOTES
+#Add method to track effort rating + workout type (constant run or intervals)
+#Take my 50-60 workouts and create synetic data from it 
+#Apply alogirthm to predict Effort + ML algorithm to examine features for intervals 
