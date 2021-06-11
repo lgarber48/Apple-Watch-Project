@@ -4,4 +4,4 @@ The aim of this project is predict Running workout Perceived Exertion (RPE from 
 
 Watch_Workouts.py: Extracts heart rate data from XML files for desrired workouts
 
-Watch_Algorthm.py: Uses this extracted data and applies algorithsm to predict RPE and workout type for a new given workout
+Watch_Algorthm.py: Uses this extracted data and applies algorithms to predict RPE and workout type for a new given workout
